@@ -1,7 +1,7 @@
 # Python Keyring 라이브러리 사용 가이드
 Question
 ```
-python 의 keyring 라이브러리가 뭔지, 만약 tiing 라는 api 의 token 이 'abcdefg12345' 일때 어떤식으로 사용하는지 설치부터 사용법까지 설명을 98-library-keyring.md 에 작성하세요.
+python 의 keyring 라이브러리가 뭔지, 만약 tiingo 라는 api 의 token 이 'abcdefg12345' 일때 어떤식으로 사용하는지 설치부터 사용법까지 설명을 98-library-keyring.md 에 작성하세요.
 ```
 <br/>
 
@@ -30,7 +30,7 @@ pip install keyring
 
 ## 3. 사용 시나리오
 
-**목표**: `tiing`이라는 API 서비스의 토큰 `'abcdefg12345'`를 안전하게 저장하고, Python 코드에서 이를 불러와 사용하는 방법을 알아봅니다.
+**목표**: `tiingo`이라는 API 서비스의 토큰 `'abcdefg12345'`를 안전하게 저장하고, Python 코드에서 이를 불러와 사용하는 방법을 알아봅니다.
 
 ### 3.1 토큰 저장하기 (Set Password)
 
@@ -42,7 +42,7 @@ pip install keyring
 import keyring
 
 # 서비스 명과 사용자 식별자(username) 정의
-service_name = "tiing"
+service_name = "tiingo"
 username = "api_user"  # 식별을 위한 사용자 이름 (임의 지정 가능)
 token = "abcdefg12345"
 
@@ -57,9 +57,9 @@ print(f"[{service_name}] 토큰이 안전하게 저장되었습니다.")
 `keyring` 라이브러리를 설치하면 `keyring` 명령어 도구도 같이 설치됩니다.
 
 ```bash
-keyring set tiing api_user
+keyring set tiingo api_user
 # 명령어를 실행하면 비밀번호 입력 프롬프트가 뜹니다.
-# Password for 'api_user' in 'tiing': 여기에 abcdefg12345 입력
+# Password for 'api_user' in 'tiingo': 여기에 abcdefg12345 입력
 ```
 
 ---
@@ -71,7 +71,7 @@ keyring set tiing api_user
 ```python
 import keyring
 
-service_name = "tiing"
+service_name = "tiingo"
 username = "api_user"
 
 # 키링에서 토큰 조회
@@ -83,7 +83,7 @@ if api_token:
     # 실제 API 사용 예시
     # import requests
     # response = requests.get(
-    #     "https://api.tiing.com/data", 
+    #     "https://api.tiingo.com/data", 
     #     headers={"Authorization": f"Bearer {api_token}"}
     # )
     
@@ -102,7 +102,7 @@ else:
 ```python
 import keyring
 
-service_name = "tiing"
+service_name = "tiingo"
 username = "api_user"
 
 try:
@@ -117,7 +117,7 @@ except keyring.errors.PasswordDeleteError:
 ## 4. 요약
 
 1.  **설치**: `pip install keyring`
-2.  **저장**: `keyring.set_password("tiing", "my_id", "abcdefg12345")`
-3.  **로드**: `key_token = keyring.get_password("tiing", "my_id")`
+2.  **저장**: `keyring.set_password("tiingo", "my_id", "abcdefg12345")`
+3.  **로드**: `key_token = keyring.get_password("tiingo", "my_id")`
 
 이렇게 하면 소스 코드를 깃허브(GitHub) 등에 올릴 때 실수로 API 키가 유출되는 사고를 방지할 수 있습니다.
