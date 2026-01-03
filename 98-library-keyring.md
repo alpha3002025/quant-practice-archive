@@ -62,6 +62,27 @@ keyring set tiingo api_user
 # Password for 'api_user' in 'tiingo': 여기에 abcdefg12345 입력
 ```
 
+#### 방법 C: 파라미터로 전달 (비대화형)
+
+스크립트 등에서 사용자 입력 없이 비밀번호를 설정해야 할 경우, 파이프(`|`)를 통해 값을 전달할 수 있습니다.
+
+```bash
+# printf를 사용하여 줄바꿈 없이 전달
+printf "abcdefg12345" | keyring set tiingo api_user
+```
+
+##### 오류 해결 조치
+
+만약 권한 오류(-25244)가 발생한다면 다음 명령어를 수행하여 꼬여있던 키체인 항목을 삭제할 수 있습니다.
+
+```bash
+# security delete-generic-password -s <서비스명> -a <사용자명>
+security delete-generic-password -s tiingo -a api_user
+```
+
+이후 `keyring set` 및 `del`이 정상적으로 작동합니다.
+
+
 ---
 
 ### 3.2 토큰 불러와서 사용하기 (Get Password)
