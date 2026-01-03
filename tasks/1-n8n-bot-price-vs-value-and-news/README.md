@@ -1,7 +1,7 @@
 # 개별 주식 브리핑봇
 What is it?
-- price vs fundamental 
-- news 번역 + summary
+- fundamental vs price : 펀더멘털 대비 현재 가격의 수준 요약 
+- news 번역 + summary : 주요 뉴스를 한국어로 번역 및 요약
 
 <br/>
 
