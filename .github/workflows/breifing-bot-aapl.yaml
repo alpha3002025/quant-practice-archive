@@ -6,7 +6,12 @@ on:
     - cron: '0 22 * * *'
     # KST 19:00 -> UTC 10:00
     - cron: '0 10 * * *'
-  workflow_dispatch:  # 수동 실행 가능하도록 추가
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: 'Target Stock Ticker'
+        required: false
+        default: 'AAPL'
 
 jobs:
   run-briefing:
@@ -43,8 +48,13 @@ jobs:
         # Slack Webhook
         printf "${{ secrets.SLACK_WEBHOOK_URL }}" | keyring set slack_webhook_url noriskfullpush
 
-    - name: Run Briefing Bot (AAPL)
+    - name: Run Briefing Bot
       # 기본적으로 keyring 백엔드가 keyrings.alt.file.PlaintextKeyring 등을 사용하도록 될 것임
       run: |
         export PYTHONUNBUFFERED=1
-        python workspace/1-langraph-bot-fundamental-vs-price/briefing-bot.py AAPL
+        TICKER="${{ inputs.ticker }}"
+        if [ -z "$TICKER" ]; then
+          TICKER="AAPL"
+        fi
+        echo "Running briefing for ticker: $TICKER"
+        python workspace/1-langraph-bot-fundamental-vs-price/briefing-bot.py "$TICKER"
