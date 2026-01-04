@@ -16,6 +16,11 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
+
+start_date_str = (pd.Timestamp.now() - pd.Timedelta(days=1)).strftime('%Y-%m-%d')
+fundamental_start_date = f"{pd.Timestamp.now().year - 1}-01-01"
+
+
 # Get ticker from command line argument if provided, otherwise default to "AAPL"
 if len(sys.argv) > 1:
     search_ticker = sys.argv[1]
@@ -67,7 +72,7 @@ def get_stock_fundamentals(ticker: str):
     print(f"Fetching data for {ticker}...")
     try:
         # 1. Daily Data
-        daily_list = client.get_fundamentals_daily(ticker, startDate='2024-01-01')
+        daily_list = client.get_fundamentals_daily(ticker, startDate=fundamental_start_date)
         if not daily_list:
              print("No daily data")
              return None
@@ -77,7 +82,7 @@ def get_stock_fundamentals(ticker: str):
         daily_latest = daily_df.sort_values('date').iloc[-1]
         
         # 2. Statements Data
-        stmt_list = client.get_fundamentals_statements(ticker, startDate='2023-01-01')
+        stmt_list = client.get_fundamentals_statements(ticker, startDate=fundamental_start_date)
         stmt_data = {}
         
         if stmt_list:
@@ -127,7 +132,7 @@ def get_tiingo_stock_news_with_api(ticker: str, api_key: str, limit=3):
         params = {
             "tickers": ticker,
             "limit": limit,
-            "startDate": "2024-01-01" # 최근 1년치 중 최신순
+            "startDate": start_date_str
         }
         
         url = "https://api.tiingo.com/tiingo/news"
@@ -322,7 +327,7 @@ print(json.dumps(fundamental_data, indent=2, default=str))
 ### (2) 뉴스 조회
 print(f"Fetching news for {search_ticker} from Tiingo...")
 ##### news api 
-news_data = get_tiingo_stock_news_with_api(search_ticker, api_key=api_key_tiingo, limit=3)
+news_data = get_tiingo_stock_news_with_api(search_ticker, api_key=api_key_tiingo, limit=5)
 # print(json.dumps(news_data, indent=2, default=str))
 
 
