@@ -4,29 +4,37 @@
 
 ## 1. 환경 설정 (Setup)
 
-`langchain` 생태계와 Google의 Gemini 모델을 사용하기 위한 `langchain-google-genai`, 그리고 `tiingo` 라이브러리를 설치합니다.
+`langchain` 생태계와 Google의 Gemini 모델을 사용하기 위한 `langchain-google-genai`, 그리고 `tiingo` 라이브러리를 설치합니다. (keyring 도 추가)
 
 ```bash
-pip install langchain langchain-google-genai tiingo pandas
+pip install langchain langchain-google-genai tiingo pandas keyring
 ```
+
+tiingo API KEY 설정
+```bash
+printf "{API Key}" | keyring set tiingo {계정명}
+```
+<br/>
 
 ## 2. Tiingo API 데이터 수집 모듈
-
-Tiingo의 Python Client를 사용하여 펀더멘털 데이터와 뉴스를 조회합니다.
+Tiingo의 Python Client를 사용하여 펀더멘털 데이터와 뉴스를 조회합니다.<br/>
 
 ### 2.1 Tiingo Client 초기화
+gemini 의 설명이 구려서 설명 삭제 후 직접 내용 정리함<br/>
 
 ```python
-from tiingo import TiingoClient
-import os
+import keyring
+import pandas as pd
 
-# API 키 설정 (가급적 환경 변수 사용)
-config = {
-    'session': True,
-    'api_key': os.getenv("TIINGO_API_KEY", "YOUR_TIINGO_API_KEY") 
-}
+from tiingo import TiingoClient
+
+api_key = keyring.get_password("tiingo", "noriskfullpush")
+config = {}
+config['session'] = True
+config['api_key'] = api_key
 client = TiingoClient(config)
 ```
+<br/>
 
 ### 2.2 펀더멘털 데이터 (Fundamental Data)
 
@@ -36,34 +44,67 @@ Tiingo의 `get_fundamentals_daily` 함수를 활용합니다.
 ```python
 def get_stock_fundamentals(ticker: str):
     """
-    Tiingo API를 통해 주식의 주요 펀더멘털 지표를 조회합니다.
+    Tiingo API의 Daily 데이터와 Statements 데이터를 결합하여
+    주식의 포괄적인 펀더멘털 지표를 조회합니다.
     """
     try:
-        # 데일리 펀더멘털 데이터 조회 (최신 기준)
-        # startDate를 지정하여 데이터프레임으로 받습니다.
-        df = client.get_fundamentals_daily(ticker, startDate='2025-01-01', asDataFrame=True)
-        
-        if df.empty:
+        # 1. Daily Data (시가총액, PER, PBR 등 주가 기반 지표)
+        daily_list = client.get_fundamentals_daily(ticker, startDate='2024-01-01')
+        if not daily_list:
+            print(f"No daily fundamental data found for {ticker}")
             return None
+            
+        daily_df = pd.DataFrame(daily_list)
+        daily_df['date'] = pd.to_datetime(daily_df['date'])
+        daily_latest = daily_df.sort_values('date').iloc[-1]
         
-        latest = df.iloc[-1]
+        # 2. Statements Data (EPS, ROE, FCF 등 재무제표 지표)
+        # 최신 재무제표를 얻기 위해 데이터 조회
+        stmt_list = client.get_fundamentals_statements(ticker, startDate='2023-01-01')
+        stmt_data = {}
         
-        # 데이터 매핑 (Tiingo API 응답 필드명 기준)
-        # 지표가 없을 경우 None 처리
+        if stmt_list:
+            # 날짜 기준 내림차순 정렬하여 가장 최근 보고서(Quarterly/Annual) 추출
+            stmt_list.sort(key=lambda x: x['date'], reverse=True)
+            latest_stmt = stmt_list[0]
+            
+            # Tiingo Statements 구조:
+            # { 'statementData': { 'incomeStatement': [{'dataCode': 'eps', 'value': ...}, ...], ... } }
+            # 이를 딕셔너리 형태 {Key: Value}로 변환하여 접근 용이하게 처리
+            if 'statementData' in latest_stmt:
+                raw_data = latest_stmt['statementData']
+                for section in ['incomeStatement', 'cashFlow', 'overview', 'balanceSheet']:
+                    for item in raw_data.get(section, []):
+                        stmt_data[item.get('dataCode')] = item.get('value')
+
+        # 3. 데이터 통합
+        # Daily 데이터와 Statement 데이터를 결합
+        ev = daily_latest.get('enterpriseVal')
+        ebitda = stmt_data.get('ebitda')
+        
         data = {
             "Symbol": ticker,
-            "Date": latest.get('date'),
-            "PER": latest.get('peRatio'),
-            "PEG": latest.get('pegRatio'),
-            "EPS": latest.get('eps'), # Trailing EPS
-            "EV/EBITDA": latest.get('enterpriseValue') / latest.get('ebitda') if latest.get('ebitda') else None,
-            # ROE, ROA 등은 daily 필드에 없을 수 있어 원천 재무제표 API 사용 필요 가능성 있음
-            # 편의상 daily endpoint에 제공되는 필드가 있다면 사용하거나, 없으면 계산 로직 추가 필요
-            "FCF": latest.get('freeCashFlow'), 
-            "ROE": latest.get('roe'),
-            "ROA": latest.get('roa')
+            "Date": daily_latest.get('date'),
+            
+            # --- Valuation Metrics (Daily) ---
+            "MarketCap": daily_latest.get('marketCap'),
+            "EnterpriseValue": ev,
+            "PER": daily_latest.get('peRatio'),
+            "PBR": daily_latest.get('pbRatio'),
+            "PEG": daily_latest.get('trailingPEG1Y'),
+            
+            # --- Financial Metrics (Statements) ---
+            "EPS": stmt_data.get('epsDiluted'),    # 희석 EPS
+            "ROE": stmt_data.get('roe'),
+            "ROA": stmt_data.get('roa'),
+            "FCF": stmt_data.get('freeCashFlow'),  # 잉여현금흐름
+            "EBITDA": ebitda,
+            
+            # --- Calculated Metrics ---
+            "EV/EBITDA": (ev / ebitda) if (ev and ebitda) else None
         }
         return data
+
     except Exception as e:
         print(f"Error fetching fundamentals for {ticker}: {e}")
         return None
