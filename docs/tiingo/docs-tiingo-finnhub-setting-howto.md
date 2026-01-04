@@ -33,12 +33,13 @@ source env-py-quant/bin/activate
 
 ### python 라이브러리 설치
 ```bash
-pip install langchain langchain-google-genai tiingo pandas keyring
+pip install langchain langchain-google-genai langchain-anthropic tiingo pandas keyring
 ```
 <br/>
 
 - `langchain`: langchain 생태계
-- `langchain-google-genai` : Google의 Gemini 모델을 사용하기 위한 라이브러리 
+- `langchain-google-genai` : Google의 Gemini 모델을 사용하기 위한 라이브러리 (현재 미사용(Gemini API KEY 불안정으로 인해))
+- `langchain-anthropic` : Anthropic의 Claude 모델을 사용하기 위한 라이브러리
 - `tiingo` : 주식 데이터 조회를 위한 라이브러리
 - `keyring` : API KEY 관리
 
@@ -97,10 +98,70 @@ virtualenv env-py-quant
 source env-py-quant/bin/activate
 
 ### python 라이브러리 설치
-pip install langchain langchain-google-genai tiingo pandas keyring
+pip install langchain langchain-anthropic langchain-google-genai google-generativeai tiingo pandas keyring
+# pip install langchain langchain-anthropic langchain-google-genai google-generativeai tiingo pandas keyring
+# pip install -U langchain-google-genai
+# pip install google-generativeai
 
 ### tiingo api key 설정
 printf "{토큰값}" | keyring set tiingo {계정명}
 ```
+<br/>
 
 
+### github actions 에서 keyring 사용
+만약 코드를 수정하지 않고(`keyring.get_password` 그대로 유지), GitHub Actions 환경에서도 `keyring` 명령어를 통해 API Key를 주입하고 싶다면 다음과 같이 설정합니다.
+
+GitHub Actions(Linux 환경)는 기본적으로 키링 백엔드가 없으므로, **`keyrings.alt`** 패키지를 추가로 설치하여 파일 기반의 백엔드를 사용하도록 해야 합니다.
+
+**Workflow YAML 예시:**
+
+```yaml
+steps:
+  - name: Set up Python
+    uses: actions/setup-python@v4
+    with:
+      python-version: '3.9'
+
+  - name: Install Dependencies
+    # keyrings.alt 패키지 필수 (Linux Headless 환경 지원용)
+    run: pip install keyring keyrings.alt
+
+  - name: Setup Keyring
+    # Secrets 값을 가져와 keyring에 저장 (비대화형)
+    run: |
+      printf "${{ secrets.TIINGO_API_KEY }}" | keyring set tiingo noriskfullpush
+      
+  - name: Run Script
+    # 코드에서는 로컬과 동일하게 keyring.get_password("tiingo", "noriskfullpush") 사용 가능
+    run: python mystock_analyzer.py
+```
+
+이 방식을 사용하면 파이썬 코드를 로컬/서버 구분 로직 없이(`if/else` 없이) 하나로 유지할 수 있는 장점이 있습니다.
+
+<br/>
+<br/>
+
+
+### gemini API KEY 발급 및 설정
+
+🔑 Gemini API 키 발급 및 확인 방법
+- Google AI Studio 접속: 먼저 Google AI Studio(aistudio.google.com) 사이트에 접속합니다.
+- 구글 계정 로그인: API를 사용할 구글 계정으로 로그인합니다.
+- API 키 메뉴 선택: 화면 왼쪽 사이드바 메뉴에서 'Get API key' (또는 'API 키 받기') 버튼을 클릭합니다.
+- 키 생성: * 새로운 프로젝트에서 키를 만들려면 **'Create API key in new project'**를 클릭합니다.
+  - 기존에 생성된 구글 클라우드 프로젝트가 있다면 해당 프로젝트를 선택하여 키를 생성할 수도 있습니다.
+- 키 복사 및 보관: 생성된 API 키 문자열이 나타나면 'Copy' 버튼을 눌러 복사합니다.
+
+<br/>
+
+### 참고 : Tiingo 뉴스 API 403 Forbidden
+무료계정으로 뉴스 API 조회시 Forbidden 에러가 발생한다면 유료구독을 안해서다. 최근 뉴스들이 대부분 유료계정에서만 볼수 있는 자료여서일것으로 보인다. 내 경우에는 4시간을 다른 API를 찾아 돌아다니다가 결국 유료결제 한번에 바로 해결됐다. ✨
+자본주의 사회...속에서 취업준비중인 나... 눙물닦자...<br/>
+<br/>
+
+
+### 기사 스크래핑을 위한 부가 라이브러리
+```
+pip install langchain-community beautifulsoup4
+```

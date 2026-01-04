@@ -107,12 +107,12 @@ def get_tiingo_stock_news_with_api(ticker: str, api_key: str,limit=3):
         return []
 
 
-def get_finnhub_stock_news_with_api(ticker: str, api_key: str):
-    # 날짜 형식: YYYY-MM-DD
-    # url = f'https://finnhub.io/api/v1/company-news?symbol={ticker}&from=2026-01-01&to=2026-01-04&token={api_key}'
-    url = f'https://finnhub.io/api/v1/company-news?symbol={ticker}&from=2026-01-01&to=2026-01-04&token={api_key}'
-    r = requests.get(url)
-    return r.json()
+# def get_finnhub_stock_news_with_api(ticker: str, api_key: str):
+#     # 날짜 형식: YYYY-MM-DD
+#     # url = f'https://finnhub.io/api/v1/company-news?symbol={ticker}&from=2026-01-01&to=2026-01-04&token={api_key}'
+#     url = f'https://finnhub.io/api/v1/company-news?symbol={ticker}&from=2026-01-01&to=2026-01-04&token={api_key}'
+#     r = requests.get(url)
+#     return r.json()
 
 
 import json
