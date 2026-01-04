@@ -165,3 +165,13 @@ steps:
 ```
 pip install langchain-community beautifulsoup4
 ```
+<br/>
+
+
+### Gemini API Key 사용관련
+아직 Gemini 를 Langchain 에서 사용하려고 할때 에러가 발생한다. 라이브러리의 호환성이 불안정한 것인지 아니면 Gemini 에서 API 사용하는 기능이 불안정하게 제공되는 것인지 아직은 파악이 안되었다.<br/>
+<br/>
+
+그래서 Claude 를 사용하기로 했다. 뭐... 약간 문과적인 작업은 Sonnet 계열이 좋긴해. 글도 잘쓰고.. 그래서 뭐 Gemini 를 사용하지 않은게 아쉽긴 하지만 Sonnet 사용하는 것도 나쁘진 않은 선택같다.<br/>
+<br/>
+
