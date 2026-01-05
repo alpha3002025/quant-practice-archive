@@ -33,7 +33,7 @@ source env-py-quant/bin/activate
 
 ### python 라이브러리 설치
 ```bash
-pip install langchain langchain-google-genai langchain-anthropic tiingo pandas keyring yahooquery finnhub
+pip install langchain langchain-anthropic langchain-google-genai google-generativeai langchain-community tiingo yahooquery pandas keyring keyrings.alt beautifulsoup4 requests
 ```
 <br/>
 
