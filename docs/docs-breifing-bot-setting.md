@@ -1,4 +1,4 @@
-# Tiingo, Finnhub 세팅 + 사용법
+# 브리핑봇 환경설정 : Tiingo, Finnhub, Yahooquery 세팅 + 사용법
 gemini 가 정리한 건 여기 저기 중요한 내용이 여러 파일로 분산되어 있어서 내 목적과 완전하게 부합되지 않아 docs 에 정리함. 앞으로 `docs` 붙은 문서는 모두 내가 직접 gemini 로 찾은 내용들을 각각 정리하고 종합한 문서로 이름을 붙이기로 결정함
 <br/>
 
@@ -33,16 +33,17 @@ source env-py-quant/bin/activate
 
 ### python 라이브러리 설치
 ```bash
-pip install langchain langchain-google-genai langchain-anthropic tiingo pandas keyring
+pip install langchain langchain-google-genai langchain-anthropic tiingo pandas keyring yahooquery finnhub
 ```
 <br/>
 
 - `langchain`: langchain 생태계
 - `langchain-google-genai` : Google의 Gemini 모델을 사용하기 위한 라이브러리 (현재 미사용(Gemini API KEY 불안정으로 인해))
 - `langchain-anthropic` : Anthropic의 Claude 모델을 사용하기 위한 라이브러리
-- `tiingo` : 주식 데이터 조회를 위한 라이브러리
 - `keyring` : API KEY 관리
-
+- `yahooquery` : 주식 데이터 조회를 위한 크롤링 라이브러리
+- `tiingo` : 주식 데이터 조회를 위한 API라이브러리
+- `finnhub` : 주식 데이터 조회를 위한 API 라이브러리
 <br/>
 
 ### keyring
@@ -85,7 +86,13 @@ keyring set finnhub {계정명}
 ## 또는 파이프를 사용하여 줄바꿈 없이 전달
 printf "abcdefg12345" | keyring set finnhub {계정명}
 ```
+<br/>
 
+### yahooquery 설정
+```bash
+pip install yahooquery
+```
+<br/>
 
 
 ### 쉘스크립트로 정리
@@ -98,8 +105,7 @@ virtualenv env-py-quant
 source env-py-quant/bin/activate
 
 ### python 라이브러리 설치
-pip install langchain langchain-anthropic langchain-google-genai google-generativeai tiingo pandas keyring
-# pip install langchain langchain-anthropic langchain-google-genai google-generativeai tiingo pandas keyring
+pip install langchain langchain-anthropic langchain-google-genai google-generativeai langchain-community tiingo finnhub yahooquery pandas keyring keyrings.alt beautifulsoup4 requests
 # pip install -U langchain-google-genai
 # pip install google-generativeai
 
@@ -125,7 +131,7 @@ steps:
 
   - name: Install Dependencies
     # keyrings.alt 패키지 필수 (Linux Headless 환경 지원용)
-    run: pip install keyring keyrings.alt
+    run: pip install langchain langchain-anthropic langchain-google-genai google-generativeai langchain-community tiingo finnhub yahooquery pandas keyring keyrings.alt beautifulsoup4 requests
 
   - name: Setup Keyring
     # Secrets 값을 가져와 keyring에 저장 (비대화형)
