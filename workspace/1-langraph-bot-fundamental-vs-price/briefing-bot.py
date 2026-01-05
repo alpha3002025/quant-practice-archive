@@ -29,10 +29,10 @@ if len(sys.argv) > 1:
     if len(sys.argv) > 2:
         webhook_url = sys.argv[2]
     else:
-        webhook_url = keyring.get_password("slack_webhook_url", "noriskfullpush")
+        webhook_url = keyring.get_password("discord_webhook_url", "noriskfullpush")
 else:
     search_ticker = "AAPL"
-    webhook_url = keyring.get_password("slack_webhook_url", "noriskfullpush")
+    webhook_url = keyring.get_password("discord_webhook_url", "noriskfullpush")
     print(f"No ticker argument provided. Defaulting to {search_ticker}. Usage: python briefing-bot.py [TICKER]")
 
 
@@ -345,97 +345,80 @@ def analyze_news_data(news_data):
     return result
 
 
-def send_briefing_slack(ticker, fundamental_data, news_data):
+def send_briefing_discord(webhook_url, ticker, fundamental_data, news_data):
     if not webhook_url:
-        print("\n[Slack Error] Webhook URL이 설정되지 않았습니다.")
+        print("\n[Discord Error] Webhook URL이 설정되지 않았습니다.")
         return
 
-    # Slack 메시지 구성 (Block Kit)
-    blocks = [
-        {
-            "type": "header",
-            "text": {
-                "type": "plain_text",
-                "text": f"📊 {ticker} 주식 브리핑 ({pd.Timestamp.now().strftime('%Y-%m-%d')})",
-                "emoji": True
-            }
-        },
-        {"type": "divider"}
-    ]
+    # Discord Embed 구조 생성
+    embed = {
+        "title": f"📊 {ticker} 주식 브리핑 ({pd.Timestamp.now().strftime('%Y-%m-%d')})",
+        "description": "AI가 분석한 최신 주식 정보 및 뉴스 요약입니다.",
+        "color": 0x00FF00,  # Green color
+        "fields": []
+    }
 
     # 1. 펀더멘탈 데이터
-    fund_text = "*1. 펀더멘탈 데이터 (Tiingo)*\n"
+    fund_text = ""
     if fundamental_data:
+        fund_lines = []
         for key, value in fundamental_data.items():
-            fund_text += f"• *{key}*: {value}\n"
+            # 출력하고 싶은 키만 선택하거나, 전체 출력
+            # 여기서는 가독성을 위해 일부 포맷팅 적용 가능
+            fund_lines.append(f"**{key}**: {value}")
+        fund_text = "\n".join(fund_lines)
     else:
-        fund_text += "데이터를 가져오지 못했습니다.\n"
+        fund_text = "데이터를 가져오지 못했습니다."
     
-    blocks.append({
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": fund_text
-        }
+    # 펀더멘탈 필드 추가 (최대 1024자)
+    embed["fields"].append({
+        "name": "1. 펀더멘탈 데이터 (Yahoo Query)",
+        "value": fund_text[:1024],
+        "inline": False
     })
-    blocks.append({"type": "divider"})
 
     # 2. 뉴스 데이터
-    blocks.append({
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": "*2. AI 뉴스 분석 (Claude)*"
-        }
-    })
-
     if news_data:
-        for news in news_data:
-            # 뉴스 텍스트 정리 (줄바꿈 등)
-            # 뉴스 포맷이 "기사. 제목 \n - 원문... \n [요약] ..." 형태임
-            # 간단하게 포맷팅
+        for i, news in enumerate(news_data):
+            # 뉴스 분석 텍스트 파싱
             lines = news.split('\n')
-            title = lines[0].replace("기사. ", "") if len(lines) > 0 else "No Title"
+            title = lines[0].replace("기사. ", "").replace("기사.", "").strip() if lines else "No Title"
             
-            # URL 추출 시도
-            url = ""
-            for line in lines:
-                if "URL :" in line:
-                    url = line.split("URL :")[1].strip()
-                    break
+            # 내용 전체를 value로 넣음 (최대 1024자 제한 고려)
+            # 만약 내용이 너무 길면 링크만 남기거나 잘라야 함.
+            content = news
+            if len(content) > 1000:
+                content = content[:997] + "..."
             
-            # 요약 내용 추출 (간단히 전체 텍스트 사용하되, 너무 길면 Slack 제한 걸릴 수 있음)
-            # 여기서는 전체 텍스트를 그대로 넣되, 인용구 처리
-            content = news.replace("\n", "\n>")
-            
-            blocks.append({
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": f"📰 *{title}*\n{content}"
-                }
+            embed["fields"].append({
+                "name": f"📰 뉴스 {i+1}: {title}",
+                "value": content,
+                "inline": False
             })
-            blocks.append({"type": "divider"})
     else:
-         blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": "분석된 뉴스가 없습니다."
-            }
+        embed["fields"].append({
+            "name": "2. AI 뉴스 분석",
+            "value": "분석된 뉴스가 없습니다.",
+            "inline": False
         })
+    
+    # Payload 구성
+    payload = {
+        "embeds": [embed],
+        "username": "Quant Briefing Bot"
+    }
 
     try:
         response = requests.post(
             webhook_url,
-            json={"blocks": blocks}
+            json=payload
         )
-        if response.status_code == 200:
-            print(f"\n[Success] Slack으로 메시지를 전송했습니다.")
+        if response.status_code == 204 or response.status_code == 200:
+            print(f"\n[Success] Discord 로 메시지를 전송했습니다.")
         else:
-            print(f"\n[Error] Slack 전송 실패: {response.status_code} {response.text}")
+            print(f"\n[Error] Discord 전송 실패: {response.status_code} {response.text}")
     except Exception as e:
-        print(f"\n[Error] Slack 전송 중 예외 발생: {e}")
+        print(f"\n[Error] Discord 전송 중 예외 발생: {e}")
 
 
 ### (1) 펀더멘탈 조회 (주석 처리됨)
@@ -470,6 +453,6 @@ print(f"Analyzing {len(news_data)} articles...")
 analyzed_news_data = analyze_news_data(news_data)
 print(json.dumps(analyzed_news_data, indent=2, default=str, ensure_ascii=False))
 
-##### Slack 전송 실행
-print(f"\nSending Slack message...")
-send_briefing_slack(search_ticker, fundamental_data, analyzed_news_data)
+##### Discord 전송 실행
+print(f"\nSending Discord message...")
+send_briefing_discord(webhook_url, search_ticker, fundamental_data, analyzed_news_data)

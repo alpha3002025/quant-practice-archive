@@ -48,6 +48,9 @@ jobs:
         # Slack Webhook
         printf "${{ secrets.SLACK_WEBHOOK_URL }}" | keyring set slack_webhook_url noriskfullpush
 
+        # Discord Webhook
+        printf "${{ secrets.DISCORD_WEBHOOK_URL }}" | keyring set discord_webhook_url noriskfullpush
+
     - name: Run Briefing Bot
       # 기본적으로 keyring 백엔드가 keyrings.alt.file.PlaintextKeyring 등을 사용하도록 될 것임
       run: |
