@@ -6,7 +6,7 @@
 <br/>
 
 ## 🚦 In Progress 
-## 브리핑 봇 (70%)
+## 브리핑 봇 (90%)
 - (1) Fundamental 대비 현재가의 수준을 가늠하는 지표 (PER, PBR, EV/EBITDA, FCF, ROE, ROA) 를 조회
 - (2) 종목에 대한 영문 뉴스 3건을 조회 후 Claude API 를 통해 한글로 번역 후 Claude API 로 퀀트투자자,추세추종 투자 전문가의 입장에서 요약
 - (3) (1) + (2) 를 Slack 메시지로 전송
@@ -14,7 +14,6 @@
 
 <br/>
 
-뉴스, 펀더멘털 데이터는 Tiingo API를 사용하여 조회합니다. 재무 데이터가 Dow 30 종목 (AAPL, MSFT, ...)에 대해서만 제공되는 등 깔끔하지 않아서 다른 API 벤더를 선정 후 개편 예정입니다.
 ![](./docs/img/readme/breifing-bot.png)
 <br/>
 <br/>
