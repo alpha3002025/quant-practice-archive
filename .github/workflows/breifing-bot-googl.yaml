@@ -1,4 +1,4 @@
-name: Briefing Bot (AAPL)
+name: Briefing Bot (GOOGL)
 
 on:
   schedule:
@@ -11,7 +11,7 @@ on:
       ticker:
         description: 'Target Stock Ticker'
         required: false
-        default: 'AAPL'
+        default: 'GOOGL'
 
 jobs:
   run-briefing:
@@ -54,7 +54,7 @@ jobs:
         export PYTHONUNBUFFERED=1
         TICKER="${{ inputs.ticker }}"
         if [ -z "$TICKER" ]; then
-          TICKER="AAPL"
+          TICKER="GOOGL"
         fi
         echo "Running briefing for ticker: $TICKER"
         python workspace/1-langraph-bot-fundamental-vs-price/briefing-bot.py "$TICKER"
