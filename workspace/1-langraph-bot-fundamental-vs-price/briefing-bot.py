@@ -1,11 +1,13 @@
 import keyring
 import pandas as pd
+import numpy as np
 import requests
 import json
 import sys
 
 ## (1) 번 기능에서 사용 (Tiingo)
 from tiingo import TiingoClient
+from yahooquery import Ticker
 
 ## (2) 번 기능에서 사용 (뉴스 본문 스크래핑)
 from langchain_community.document_loaders import WebBaseLoader
@@ -68,7 +70,7 @@ prompt_template_str = """
     """
 
 
-def get_stock_fundamentals(ticker: str):
+def get_stock_fundamentals_tiingo(ticker: str):
     print(f"Fetching data for {ticker}...")
     try:
         # 1. Daily Data
@@ -114,6 +116,123 @@ def get_stock_fundamentals(ticker: str):
             "FCF": stmt_data.get('freeCashFlow'),
             "EBITDA": ebitda,
             "EV/EBITDA": (ev / ebitda) if (ev and ebitda) else None
+        }
+        return data
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+
+def get_stock_fundamentals_yahooquery(ticker_str: str):
+    print(f"Fetching data for {ticker_str}...")
+
+    try:
+        # 1. Ticker 객체 생성
+        ticker = Ticker(ticker_str)
+
+        # 2. 필요한 데이터 모듈 가져오기 (각 프로퍼티는 {ticker: data} 형태의 딕셔너리 반환)
+        # - key_stats: 주요 통계 (PBR, PEG, EPS 등)
+        # - summary_detail: 요약 정보 (PER 등)
+        # - financial_data: 재무 데이터 (ROE, ROA, FCF 등)
+        key_stats = ticker.key_stats[ticker_str]
+        summary_detail = ticker.summary_detail[ticker_str]
+        fin_data = ticker.financial_data[ticker_str]
+        
+        # 3. 데이터 추출
+        market_cap = summary_detail.get('marketCap')
+        # print(f"Market Cap: {market_cap}")
+
+        # EPS (주당 순이익)
+        eps = key_stats.get('trailingEps')
+        # print(f"EPS (Trailing): {eps}")
+
+        # PER (주가수익비율)
+        per = summary_detail.get('trailingPE')
+        # print(f"PER (Trailing): {per}")
+
+        # PBR (주가순자산비율)
+        pbr = key_stats.get('priceToBook')
+        # print(f"PBR: {pbr}")
+
+        # ROE (자기자본이익률)
+        roe = fin_data.get('returnOnEquity')
+        # print(f"ROE: {roe}")
+
+        # ROA (총자산이익률)
+        roa = fin_data.get('returnOnAssets')
+        # print(f"ROA: {roa}")
+
+        # PEG (주가수익성장성비율)
+        peg = key_stats.get('pegRatio')
+        # print(f"PEG: {peg}")
+
+        # FCF (잉여현금흐름)
+        fcf = fin_data.get('freeCashflow')
+        # print(f"FCF: {fcf}")
+
+        # EV (기업가치)
+        ev = key_stats.get('enterpriseValue')
+        # print(f"Enterprise Value (EV): {ev}")
+
+        # EBITDA (영업이익)
+        ebitda = fin_data.get('ebitda')
+        # print(f"EBITDA: {ebitda}")
+
+        # EV/EBITDA (기업가치/EBITDA)
+        ev_ebitda = key_stats.get('enterpriseToEbitda')
+        # print(f"EV/EBITDA: {ev_ebitda}")
+
+        # 현재 주가 (financial_data의 'currentPrice' 사용)
+        current_price = fin_data.get('currentPrice')
+
+        # 직전 4개 분기 EPS
+        quarterly_data = ticker.all_financial_data(frequency='q')
+        
+        prev_4q_eps_values_str = "N/A"
+        sum_eps_prev_4q = None
+        prev_sum_eps_vs_price = None
+
+        if not quarterly_data.empty:
+            quarterly_data.reset_index(inplace=True)
+            # 해당 심볼 데이터 필터링
+            q_data = quarterly_data[quarterly_data['symbol'] == ticker_str].sort_values('asOfDate', ascending=False)
+            
+            # EPS 컬럼 확인
+            eps_col = 'DilutedEPS' if 'DilutedEPS' in q_data.columns else 'BasicEPS'
+            
+            if eps_col in q_data.columns:
+                last_4_quarters = q_data.head(4)
+                eps_values = last_4_quarters[eps_col].values
+                # 직전 4개 분기 EPS 문자열
+                prev_4q_eps_values_str = ' / '.join([str(val) for val in eps_values])
+                
+                # 직전 4개 분기 EPS 총합 (TTM EPS)
+                sum_eps_prev_4q = np.sum(eps_values)
+                
+                # prev_sum_eps_vs_price (Price / TTM EPS)
+                if sum_eps_prev_4q and sum_eps_prev_4q != 0 and current_price:
+                    prev_sum_eps_vs_price = current_price / sum_eps_prev_4q
+
+
+
+        data = {
+            "Symbol": ticker_str,
+            "Date": pd.Timestamp.now().strftime('%Y-%m-%d'), # Yahooquery는 현재 기준 데이터
+            "MarketCap": market_cap,
+            "PER": per,
+            "PBR": pbr,
+            "PEG": peg,
+            "EPS": eps,
+            "ROE": roe,
+            "ROA": roa,
+            "FCF": fcf,
+            "EnterpriseValue": ev,
+            "EBITDA": ebitda, 
+            "EV/EBITDA": ev_ebitda,
+            "PrevEPSValues": prev_4q_eps_values_str,
+            "PrevSumEPS": sum_eps_prev_4q,
+            "PrevSumEPSvsPrice": prev_sum_eps_vs_price
         }
         return data
 
@@ -320,7 +439,8 @@ def send_briefing_slack(ticker, fundamental_data, news_data):
 
 
 ### (1) 펀더멘탈 조회 (주석 처리됨)
-fundamental_data = get_stock_fundamentals(search_ticker)
+# fundamental_data = get_stock_fundamentals_tiingo(search_ticker)
+fundamental_data = get_stock_fundamentals_yahooquery(search_ticker)
 print(json.dumps(fundamental_data, indent=2, default=str))
 
 
@@ -338,8 +458,8 @@ news_data = merge_article_content(news_data)
 # print(json.dumps(news_data, indent=2, default=str))
 
 
-### (3) Gemini 뉴스 분석 프롬프트 (Raw Text)
-print("\n" + "="*50 + "\n[Gemini News Briefing]\n" + "="*50)
+### (3) Claude 뉴스 분석 프롬프트 (Raw Text)
+print("\n" + "="*50 + "\n[Claude News Briefing]\n" + "="*50)
 ##### llm 모델 초기화작업
 llm = initialize_llm()
 ##### 체인 생성

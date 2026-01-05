@@ -30,7 +30,7 @@ jobs:
       # keyring 사용을 위해 keyrings.alt 필수
       run: |
         python -m pip install --upgrade pip
-        pip install langchain langchain-anthropic langchain-google-genai google-generativeai langchain-community tiingo pandas keyring keyrings.alt beautifulsoup4 requests
+        pip install langchain langchain-anthropic langchain-google-genai google-generativeai langchain-community tiingo finnhub yahooquery pandas keyring keyrings.alt beautifulsoup4 requests
 
     - name: Setup Keyring
       # Secrets 값을 가져와 keyring에 저장 (Linux Headless 환경용)
